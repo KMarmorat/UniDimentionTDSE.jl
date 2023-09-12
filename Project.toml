@@ -1,0 +1,13 @@
+name = "UniDimentionTDSE"
+uuid = "22cf1bb6-fd48-446e-9a06-38831a1521c4"
+authors = ["KMarmorat <kenzo.marmorat@ens.psl.eu> and contributors"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1.9"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
