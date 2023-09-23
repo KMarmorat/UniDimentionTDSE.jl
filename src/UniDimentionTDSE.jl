@@ -67,8 +67,8 @@ function Hamiltonian(V,x::AbstractRange)
     SymTridiagonal((midline),(topline))
 end
 
-function simulate(ψ,param::SimulationParameter,x,V)
-    simulate(ψ,param,x,V,(t)->0)
+function simulate(ψ,param::SimulationParameter,V)
+    simulate(ψ,param,V,(t)->0)
 end
 
 function simulate(ψ,param::SimulationParameter,V,F)
