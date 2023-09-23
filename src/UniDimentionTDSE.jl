@@ -71,8 +71,9 @@ function simulate(ψ,param::SimulationParameter,x,V)
     simulate(ψ,param,x,V,(t)->0)
 end
 
-function simulate(ψ,param::SimulationParameter,x,V,F)
+function simulate(ψ,param::SimulationParameter,V,F)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
+    x = range(-param.a,param.a;step= param.Δx)
 
     H = Hamiltonian(V,x)
     H_0 = copy(H)
