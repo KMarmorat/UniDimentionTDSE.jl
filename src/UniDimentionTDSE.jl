@@ -59,7 +59,7 @@ function Hamiltonian!(H::SymTridiagonal,Hdiag_0,x::AbstractRange,F,t)
     @. H.dv = Hdiag_0 + x*F(t)
 end
 
-function Hamiltonian(x::AbstractRange,V)
+function Hamiltonian(V,x::AbstractRange)
     "Create the time independant Hamiltonian"
     Δx = step(x)
     midline = V.(x)   .+ 1/(Δx)^2
@@ -74,7 +74,7 @@ end
 function simulate(ψ,param::SimulationParameter,x,V,F)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
 
-    H = Hamiltonian(x,V)
+    H = Hamiltonian(V,x)
     H_0 = copy(H)
 
     _,eigVecs = eigen(H,1:param.Neig)
@@ -98,7 +98,7 @@ end
 
 function getEigen(V,param::SimulationParameter;irange::UnitRange=1:1)
     x = range(-param.a,param.a;step= param.Δx)
-    H = Hamiltonian(V,param)
+    H = Hamiltonian(V,x)
     eigen(H,irange)
 end
 
@@ -118,7 +118,7 @@ function test()
     V = x -> 1/2*x.^2
     x = range(-5,5;step= 0.001)
     
-    H = Hamiltonian(x,V)
+    H = Hamiltonian(V,x)
 
     _ ,eig = eigen(H,1:2)
     ψ_0 = eig[:,1] + im * eig[:,2]
