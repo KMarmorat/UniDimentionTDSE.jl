@@ -1,6 +1,6 @@
 module UniDimentionTDSE
 using LinearAlgebra,Statistics,DelimitedFiles
-export Hamiltonian,simulate
+export Hamiltonian,simulate,test
 
 struct SimulationParameter
     Δx::Float64
@@ -12,11 +12,9 @@ struct SimulationParameter
     Filename::String
 end
 
-function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t)
-    open(param.Filename,"a") do io
-        pop = reshape([abs(sum(ψ.*ϕ)) for ϕ in eachcol(eigVecs)],1,param.Neig);
-        writedlm(io,[t  pop F(t) angle(ψ[end÷2])])
-    end;
+function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io)
+    pop = reshape([abs2(dot(ψ,normalize!(ϕ))) for ϕ in eachcol(eigVecs)],1,param.Neig)
+    writedlm(io,[t  pop F(t) angle(ψ[end÷2])])
 end
 
 function initiateFile(param,syntax::String)
@@ -84,32 +82,33 @@ function simulate(ψ,param::SimulationParameter,x,V,F)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
 
     H = Hamiltonian(x,V)
+    H_0 = copy(H)
 
     _,eigVecs = eigen(H,1:param.Neig)
 
     
-    H_0 = copy(H)
     (Htop,Hbottom) = buildCrankNicolson(H,param.Δt)
 
-    for i = 1:param.Nt
-        t = i*param.Δt
+    open(param.Filename,"a") do io
+        for i = 1:param.Nt
+            t = i*param.Δt
 
-        Hamiltonian!(H,H_0.dv,x,F,t)
-        buildCrankNicolson!(H,Htop,Hbottom,param.Δt)
-        propagate!(ψ,Htop,Hbottom)
+            Hamiltonian!(H,H_0.dv,x,F,t)
+            buildCrankNicolson!(H,Htop,Hbottom,param.Δt)
+            propagate!(ψ,Htop,Hbottom)
 
-        iszero(real(param.Δt)) && normalize!(ψ * param.Δx)
-        writeToFile(ψ,param,eigVecs,F,t)
+            iszero(real(param.Δt)) && normalize!(ψ * param.Δx)
+            writeToFile(ψ,param,eigVecs,F,t,io)
+        end
     end
 end
-
 function test()
     param = SimulationParameter(
     0.001,
     5,
-    0.001,
-    3.14,
-    3140,
+    0.01,
+    31.400,
+    31400,
     3,
     "Test"
     )
@@ -119,13 +118,16 @@ function test()
     V = x -> 1/2*x.^2
     x = range(-5,5;step= 0.001)
     
-    H =Hamiltonian(x,V)
+    H = Hamiltonian(x,V)
 
-    epsilon ,ψ_0 = eigen(H,1:1)
-    normalize!(ψ_0 * param.Δx)
+    _ ,eig = eigen(H,1:2)
+    ψ_0 = eig[:,1] + im * eig[:,2]
 
-    ψ_0 = convert(Matrix{Complex},ψ_0)
-    simulate(ψ_0,param,x,V)
+    ψ_0 = convert(Array{Complex},ψ_0)
+    normalize!(ψ_0)
+    ψ_0 ./ param.Δx
+    F(t) = 0.1*sin((2)t)
+
+    simulate(ψ_0,param,x,V,F)
 end
-
 end
