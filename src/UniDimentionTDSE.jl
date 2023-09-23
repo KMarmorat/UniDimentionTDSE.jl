@@ -1,5 +1,5 @@
 module UniDimentionTDSE
-using LinearAlgebra,Statistics,DelimitedFiles
+using LinearAlgebra,DelimitedFiles
 export Hamiltonian,simulate,test
 
 struct SimulationParameter
