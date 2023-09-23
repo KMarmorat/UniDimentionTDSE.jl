@@ -1,6 +1,6 @@
 module UniDimentionTDSE
 using LinearAlgebra,DelimitedFiles
-export Hamiltonian,simulate,test
+export Hamiltonian,simulate,test,getEigen
 
 struct SimulationParameter
     Δx::Float64
@@ -15,13 +15,6 @@ end
 function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io)
     pop = reshape([abs2(dot(ψ,normalize!(ϕ))) for ϕ in eachcol(eigVecs)],1,param.Neig)
     writedlm(io,[t  pop F(t) angle(ψ[end÷2])])
-end
-
-function initiateFile(param,syntax::String)
-    open(param.Filename,"w") do io
-        write(io,"#Syntax is:" * syntax)
-        writedlm(io,[param.Δx param.a param.Δt param.time param.Neig])
-    end;
 end
 
 function readFile(param)
@@ -102,6 +95,13 @@ function simulate(ψ,param::SimulationParameter,x,V,F)
         end
     end
 end
+
+function getEigen(V,param::SimulationParameter;irange::UnitRange=1:1)
+    x = range(-param.a,param.a;step= param.Δx)
+    H = Hamiltonian(V,param)
+    eigen(H,irange)
+end
+
 function test()
     param = SimulationParameter(
     0.001,
@@ -112,8 +112,8 @@ function test()
     3,
     "Test"
     )
-    syntax = "\n"
-    initiateFile(param,syntax::String)
+    #syntax = "\n"
+    #initiateFile(param,syntax::String)
 
     V = x -> 1/2*x.^2
     x = range(-5,5;step= 0.001)
