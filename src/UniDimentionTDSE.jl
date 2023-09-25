@@ -97,10 +97,14 @@ end
 function getEigen(V,param::SimulationParameter;irange::UnitRange=1:1)
     x = range(-param.a,param.a;step= param.Δx)
     H = Hamiltonian(V,x)
-    ψ =  eigen(H,irange)
-    normalize!(ψ)
-    ψ /= param.Δx
-    ψ
+    E, ψs =  eigen(H,irange)
+
+    for ψ in eachcol(ψs)
+        normalize!(ψ)
+        ψ ./= param.Δx
+    end
+
+    (E,ψs)
 end
 
 
@@ -116,22 +120,19 @@ function test()
     )
     #syntax = "\n"
     #initiateFile(param,syntax::String)
-    rm(param.Filename)
+    #rm(param.Filename)
 
     V = x -> 1/2*x.^2
     x = range(-5,5;step= 0.01)
-    
-    H = Hamiltonian(V,x)
 
-    _ ,eig = eigen(H,1:2)
-    ψ_0 = eig[:,1] + im * eig[:,2]
+    
+    _ ,eig = getEigen(V,param ;irange = 1:3)
+    ψ_0 = 1/sqrt(2) *(eig[:,1] + im * eig[:,2])
 
     ψ_0 = convert(Array{Complex},ψ_0)
-    normalize!(ψ_0)
 
-    ψ_0 /= param.Δx
+    @show norm(ψ_0)*param.Δx
 
-    @show norm(ψ_0)
     F(t) = 0.1*sin((2)t)
 
     simulate(ψ_0,param,V,F)
