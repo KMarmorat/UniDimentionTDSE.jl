@@ -12,14 +12,12 @@ struct SimulationParameter
     Filename::String
 end
 
-function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io;norm::Bool = false)
+function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io,extrafunctions...)
+
     pop = reshape([abs2(dot(ψ,normalize!(ϕ))) for ϕ in eachcol(eigVecs)],1,param.Neig)
-    if norm 
-        ψ_norm = norm(ψ)/param.Δx
-        writedlm(io,[t  pop F(t) angle(ψ[end÷2]) ψ_norm])
-    else
-        writedlm(io,[t  pop F(t) angle(ψ[end÷2])])
-    end
+    extra = reshape([f(ψ) for f in extrafunctions],1,length(extrafunctions))
+
+    writedlm(io,[t  pop F(t) angle(ψ[end÷2]) extra])
 end
 
 function readFile(param)
@@ -72,11 +70,11 @@ function Hamiltonian(V,x::AbstractRange)
     SymTridiagonal((midline),(topline))
 end
 
-function simulate(ψ,param::SimulationParameter,V;norm::Bool = false)
-    simulate(ψ,param,V,(t)->0;norm = norm)
+function simulate(ψ,param::SimulationParameter,V)
+    simulate(ψ,param,V,(t)->0)
 end
 
-function simulate(ψ,param::SimulationParameter,V,F;norm::Bool = false)
+function simulate(ψ,param::SimulationParameter,V,F,extra_functions...)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
     x = range(-param.a,param.a;step= param.Δx)
 
@@ -96,8 +94,8 @@ function simulate(ψ,param::SimulationParameter,V,F;norm::Bool = false)
             buildCrankNicolson!(H,Htop,Hbottom,param.Δt)
             propagate!(ψ,Htop,Hbottom)
 
-            iszero(real(param.Δt)) && normalize!(ψ * param.Δx)
-            writeToFile(ψ,param,eigVecs,F,t,io;norm = norm)
+            iszero(real(param.Δt)) && begin  normalize!(ψ); ψ/=param.Δx end
+            writeToFile(ψ,param,eigVecs,F,t,io,extra_functions)
         end
     end
 end
@@ -110,11 +108,11 @@ end
 
 function test()
     param = SimulationParameter(
-    0.001,
+    0.01,
     5,
     0.01,
     31.400,
-    31400,
+    3140,
     3,
     "Test"
     )
@@ -122,7 +120,7 @@ function test()
     #initiateFile(param,syntax::String)
 
     V = x -> 1/2*x.^2
-    x = range(-5,5;step= 0.001)
+    x = range(-5,5;step= 0.01)
     
     H = Hamiltonian(V,x)
 
@@ -131,9 +129,12 @@ function test()
 
     ψ_0 = convert(Array{Complex},ψ_0)
     normalize!(ψ_0)
-    ψ_0 ./ param.Δx
+
+    ψ_0 /= param.Δx
+
+    @show norm(ψ_0)
     F(t) = 0.1*sin((2)t)
 
-    simulate(ψ_0,param,x,V,F)
+    simulate(ψ_0,param,V,F)
 end
 end
