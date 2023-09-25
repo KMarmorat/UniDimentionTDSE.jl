@@ -15,8 +15,11 @@ end
 function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io,extrafunctions...)
 
     pop = reshape([abs2(dot(ψ,normalize!(ϕ))) for ϕ in eachcol(eigVecs)],1,param.Neig)
-    extra = reshape([f(ψ) for f in extrafunctions],1,length(extrafunctions))
-
+    if iszero(length(extrafunctions))
+        extra = []
+    else
+        extra = reshape([f(ψ) for f in extrafunctions],1,length(extrafunctions))
+    end
     writedlm(io,[t  pop F(t) angle(ψ[end÷2]) extra])
 end
 
