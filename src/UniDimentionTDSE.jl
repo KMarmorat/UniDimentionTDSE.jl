@@ -14,7 +14,7 @@ end
 
 function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io,extrafunctions...)
 
-    pop = reshape([abs2(dot(ψ,normalize!(ϕ)/param.Δx)) for ϕ in eachcol(eigVecs)],1,param.Neig)
+    pop = reshape([abs2(dot(ψ,normalize!(ϕ)*param.Δx)) for ϕ in eachcol(eigVecs)],1,param.Neig)
     extra = reshape([f(ψ,t) for f in extrafunctions],1,length(extrafunctions))
     ψ_norm = norm(ψ)*param.Δx
 
@@ -74,7 +74,7 @@ function simulate(ψ,param::SimulationParameter,V,F,extrafunctions...)
     H = Hamiltonian(V,x)
     H_0 = copy(H)
 
-    _,eigVecs = eigen(H,1:param.Neig)
+    _,eigVecs = getEigen(V,param;irange= 1:param.Neig)
 
     
     (Htop,Hbottom) = buildCrankNicolson(H,param.Δt)
