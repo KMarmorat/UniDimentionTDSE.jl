@@ -14,13 +14,13 @@ end
 
 function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io,extrafunctions...)
 
-    pop = reshape([abs2(dot(ψ,normalize!(ϕ))) for ϕ in eachcol(eigVecs)],1,param.Neig)
+    pop = reshape([abs2(dot(ψ,normalize!(ϕ)*param.Δx)) for ϕ in eachcol(eigVecs)],1,param.Neig)
     if iszero(length(extrafunctions))
-        extra = []
+        writedlm(io,[t  pop F(t) angle(ψ[end÷2])])
     else
         extra = reshape([f(ψ) for f in extrafunctions],1,length(extrafunctions))
+        writedlm(io,[t  pop F(t) angle(ψ[end÷2]) extra])
     end
-    writedlm(io,[t  pop F(t) angle(ψ[end÷2]) extra])
 end
 
 function readFile(param)
@@ -98,7 +98,11 @@ function simulate(ψ,param::SimulationParameter,V,F,extrafunctions...)
             propagate!(ψ,Htop,Hbottom)
 
             iszero(real(param.Δt)) && begin  normalize!(ψ); ψ/=param.Δx end
-            writeToFile(ψ,param,eigVecs,F,t,io,extrafunctions)
+            if iszero(length(extrafunctions))
+                writeToFile(ψ,param,eigVecs,F,t,io)
+            else
+                writeToFile(ψ,param,eigVecs,F,t,io,extrafunctions)
+            end
         end
     end
 end
@@ -108,6 +112,7 @@ function getEigen(V,param::SimulationParameter;irange::UnitRange=1:1)
     H = Hamiltonian(V,x)
     eigen(H,irange)
 end
+
 
 function test()
     param = SimulationParameter(
