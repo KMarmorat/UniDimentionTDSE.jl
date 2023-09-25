@@ -16,8 +16,9 @@ function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io,extrafunctions
 
     pop = reshape([abs2(dot(ψ,normalize!(ϕ)/param.Δx)) for ϕ in eachcol(eigVecs)],1,param.Neig)
     extra = reshape([f(ψ,t) for f in extrafunctions],1,length(extrafunctions))
+    ψ_norm = norm(ψ)*param.Δx
 
-    writedlm(io,[t  pop F(t) angle(ψ[end÷2]) extra])
+    writedlm(io,[t  pop F(t) ψ_norm extra],';')
 end
 
 struct Gaussian{T}
@@ -112,6 +113,7 @@ function test()
     )
     #syntax = "\n"
     #initiateFile(param,syntax::String)
+    rm(param.Filename)
 
     V = x -> 1/2*x.^2
     x = range(-5,5;step= 0.01)
@@ -129,7 +131,7 @@ function test()
     @show norm(ψ_0)
     F(t) = 0.1*sin((2)t)
 
-    simulate(ψ_0,param,V,F)
+    simulate(ψ_0,param,V,F,(x,t)-> dot(x,x))
 end
 function hello()
     println("Hello")
