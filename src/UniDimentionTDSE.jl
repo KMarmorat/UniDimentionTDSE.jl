@@ -97,7 +97,10 @@ end
 function getEigen(V,param::SimulationParameter;irange::UnitRange=1:1)
     x = range(-param.a,param.a;step= param.Δx)
     H = Hamiltonian(V,x)
-    eigen(H,irange)
+    ψ =  eigen(H,irange)
+    normalize!(ψ)
+    ψ /= param.Δx
+    ψ
 end
 
 
@@ -131,7 +134,7 @@ function test()
     @show norm(ψ_0)
     F(t) = 0.1*sin((2)t)
 
-    simulate(ψ_0,param,V,F,(x,t)-> dot(x,x))
+    simulate(ψ_0,param,V,F)
 end
 function hello()
     println("Hello")
