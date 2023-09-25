@@ -16,6 +16,7 @@ function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io,extrafunctions
 
     pop = reshape([abs2(dot(ψ,normalize!(ϕ)*param.Δx)) for ϕ in eachcol(eigVecs)],1,param.Neig)
     extra = reshape([f(ψ,t) for f in extrafunctions],1,length(extrafunctions))
+
     writedlm(io,[t  pop F(t) angle(ψ[end÷2]) extra])
 end
 
@@ -86,6 +87,7 @@ function simulate(ψ,param::SimulationParameter,V,F,extrafunctions...)
             propagate!(ψ,Htop,Hbottom)
 
             iszero(real(param.Δt)) && begin  normalize!(ψ); ψ/=param.Δx end
+
             writeToFile(ψ,param,eigVecs,F,t,io,extrafunctions...)
         end
     end
@@ -128,5 +130,8 @@ function test()
     F(t) = 0.1*sin((2)t)
 
     simulate(ψ_0,param,V,F)
+end
+function hello()
+    println("Hello")
 end
 end
