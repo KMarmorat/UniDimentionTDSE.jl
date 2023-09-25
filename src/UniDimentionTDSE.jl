@@ -15,20 +15,8 @@ end
 function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io,extrafunctions...)
 
     pop = reshape([abs2(dot(ψ,normalize!(ϕ)*param.Δx)) for ϕ in eachcol(eigVecs)],1,param.Neig)
-    if iszero(length(extrafunctions))
-        writedlm(io,[t  pop F(t) angle(ψ[end÷2])])
-    else
-        extra = reshape([f(ψ) for f in extrafunctions],1,length(extrafunctions))
-        writedlm(io,[t  pop F(t) angle(ψ[end÷2]) extra])
-    end
-end
-
-function readFile(param)
-    open(param.Filename,"r") do io
-        R = readdlm(io,)
-        (param.Δx,param.a,param.Δt,param.time,param.Neig) = R[1,1:4]
-        return [R[:,x] for x in 2:(2+param.Neig)]
-    end;
+    extra = reshape([f(ψ) for f in extrafunctions],1,length(extrafunctions))
+    writedlm(io,[t  pop F(t) angle(ψ[end÷2]) extra])
 end
 
 struct Gaussian{T}
@@ -98,11 +86,7 @@ function simulate(ψ,param::SimulationParameter,V,F,extrafunctions...)
             propagate!(ψ,Htop,Hbottom)
 
             iszero(real(param.Δt)) && begin  normalize!(ψ); ψ/=param.Δx end
-            if iszero(length(extrafunctions))
-                writeToFile(ψ,param,eigVecs,F,t,io)
-            else
-                writeToFile(ψ,param,eigVecs,F,t,io,extrafunctions)
-            end
+            writeToFile(ψ,param,eigVecs,F,t,io,extrafunctions...)
         end
     end
 end
