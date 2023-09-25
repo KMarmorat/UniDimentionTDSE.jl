@@ -12,9 +12,14 @@ struct SimulationParameter
     Filename::String
 end
 
-function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io)
+function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io;norm::Bool = false)
     pop = reshape([abs2(dot(ψ,normalize!(ϕ))) for ϕ in eachcol(eigVecs)],1,param.Neig)
-    writedlm(io,[t  pop F(t) angle(ψ[end÷2])])
+    if norm 
+        ψ_norm = norm(ψ)/param.Δx
+        writedlm(io,[t  pop F(t) angle(ψ[end÷2]) ψ_norm])
+    else
+        writedlm(io,[t  pop F(t) angle(ψ[end÷2])])
+    end
 end
 
 function readFile(param)
@@ -67,11 +72,11 @@ function Hamiltonian(V,x::AbstractRange)
     SymTridiagonal((midline),(topline))
 end
 
-function simulate(ψ,param::SimulationParameter,V)
-    simulate(ψ,param,V,(t)->0)
+function simulate(ψ,param::SimulationParameter,V;norm::Bool = false)
+    simulate(ψ,param,V,(t)->0;norm = norm)
 end
 
-function simulate(ψ,param::SimulationParameter,V,F)
+function simulate(ψ,param::SimulationParameter,V,F;norm::Bool = false)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
     x = range(-param.a,param.a;step= param.Δx)
 
@@ -92,7 +97,7 @@ function simulate(ψ,param::SimulationParameter,V,F)
             propagate!(ψ,Htop,Hbottom)
 
             iszero(real(param.Δt)) && normalize!(ψ * param.Δx)
-            writeToFile(ψ,param,eigVecs,F,t,io)
+            writeToFile(ψ,param,eigVecs,F,t,io;norm = norm)
         end
     end
 end
