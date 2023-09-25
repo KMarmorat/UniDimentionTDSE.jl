@@ -74,7 +74,7 @@ function simulate(ψ,param::SimulationParameter,V)
     simulate(ψ,param,V,(t)->0)
 end
 
-function simulate(ψ,param::SimulationParameter,V,F,extra_functions...)
+function simulate(ψ,param::SimulationParameter,V,F,extrafunctions...)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
     x = range(-param.a,param.a;step= param.Δx)
 
@@ -95,7 +95,7 @@ function simulate(ψ,param::SimulationParameter,V,F,extra_functions...)
             propagate!(ψ,Htop,Hbottom)
 
             iszero(real(param.Δt)) && begin  normalize!(ψ); ψ/=param.Δx end
-            writeToFile(ψ,param,eigVecs,F,t,io,extra_functions)
+            writeToFile(ψ,param,eigVecs,F,t,io,extrafunctions)
         end
     end
 end
