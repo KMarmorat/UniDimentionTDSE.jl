@@ -14,7 +14,7 @@ end
 
 function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io,extrafunctions...)
 
-    pop = reshape([abs2(dot(ψ,normalize!(ϕ)*param.Δx)) for ϕ in eachcol(eigVecs)],1,param.Neig)
+    pop = reshape([dot(ψ,normalize!(ϕ)*param.Δx) for ϕ in eachcol(eigVecs)],1,param.Neig)
     extra = reshape([f(ψ,t) for f in extrafunctions],1,length(extrafunctions))
     ψ_norm = norm(ψ)*param.Δx
 
@@ -111,29 +111,32 @@ end
 function test()
     param = SimulationParameter(
     0.01,
-    5,
+    10,
     0.01,
     31.400,
     3140,
-    3,
+    20,
     "Test"
     )
     #syntax = "\n"
     #initiateFile(param,syntax::String)
     #rm(param.Filename)
+    open(param.Filename,"w") do io
+        write(io,"")
+    end
 
     V = x -> 1/2*x.^2
     x = range(-5,5;step= 0.01)
 
     
     _ ,eig = getEigen(V,param ;irange = 1:3)
-    ψ_0 = 1/sqrt(2) *(eig[:,1] + im * eig[:,2])
+    ψ_0 = eig[:,1] 
 
     ψ_0 = convert(Array{Complex},ψ_0)
 
     @show norm(ψ_0)*param.Δx
 
-    F(t) = 0.1*sin((2)t)
+    F(t) = 0.5*sin(t*0.8)*(t<=6π)
 
     simulate(ψ_0,param,V,F)
 end
