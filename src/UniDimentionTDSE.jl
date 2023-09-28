@@ -1,6 +1,8 @@
 module UniDimentionTDSE
 using LinearAlgebra,DelimitedFiles
 export Hamiltonian,simulate,test,getEigen
+include("absorbtion.jl")
+include("analyse.jl")
 
 struct SimulationParameter
     Δx::Float64
@@ -19,6 +21,7 @@ function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io,extrafunctions
     ψ_norm = norm(ψ)*param.Δx
 
     writedlm(io,[t  pop F(t) ψ_norm extra],';')
+
 end
 
 struct Gaussian{T}
@@ -79,7 +82,7 @@ function simulate(ψ,param::SimulationParameter,V,F,extrafunctions...)
     
     (Htop,Hbottom) = buildCrankNicolson(H,param.Δt)
 
-    open(param.Filename,"a") do io
+    open(param.Filename,"w") do io
         for i = 1:param.Nt
             t = i*param.Δt
 
@@ -91,6 +94,10 @@ function simulate(ψ,param::SimulationParameter,V,F,extrafunctions...)
 
             writeToFile(ψ,param,eigVecs,F,t,io,extrafunctions...)
         end
+    end
+
+    open(param.Filename * ".wavefunctions","w") do io
+        writedlm(io,ψ,';')
     end
 end
 
