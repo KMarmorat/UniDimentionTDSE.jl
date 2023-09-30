@@ -1,6 +1,6 @@
 module UniDimentionTDSE
 using LinearAlgebra,DelimitedFiles
-export Hamiltonian,simulate,test,getEigen
+export Hamiltonian,simulate,test,getEigen,test_wigner
 include("absorbtion.jl")
 include("analyse.jl")
 
@@ -72,7 +72,7 @@ end
 
 function simulate(ψ,param::SimulationParameter,V,F,extrafunctions...)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
-    x = range(-param.a,param.a;step= param.Δx)
+    x = buildx(param)
 
     H = Hamiltonian(V,x)
     H_0 = copy(H)
@@ -113,6 +113,9 @@ function getEigen(V,param::SimulationParameter;irange::UnitRange=1:1)
 
     (E,ψs)
 end
+function buildx(param::SimulationParameter)
+    range(-param.a,param.a;step=param.Δx)
+end
 
 
 function test()
@@ -133,7 +136,7 @@ function test()
     end
 
     V = x -> 1/2*x.^2
-    x = range(-5,5;step= 0.01)
+    x = range(param)
 
     
     _ ,eig = getEigen(V,param ;irange = 1:3)
@@ -146,6 +149,46 @@ function test()
     F(t) = 0.5*sin(t*0.8)*(t<=6π)
 
     simulate(ψ_0,param,V,F)
+end
+function test_wigner()
+    param = SimulationParameter(
+    0.01,
+    5,
+    0.1,
+    31.400,
+    3140,
+    20,
+    "Test"
+    )
+    V = x -> 1/2*x.^2
+    x = buildx(param)
+
+    Δx = 0.1
+    _,ψ = getEigen(V,param)
+
+    plot_wigner(ψ,x;Δx=Δx)
+end
+function test_P_windows()
+    param = SimulationParameter(
+    0.01,
+    5,
+    0.1,
+    31.400,
+    3140,
+    20,
+    "Test"
+    )
+    γ = 0.0001
+    V = x -> 1/2*x.^2
+    x = buildx(param)
+
+    _,ψ = getEigen(V,param)
+    H = Hamiltonian(V,x)
+    E = range(0.4,0.6;step=0.0001)
+    Energy = [P_windows(ψ,H,ϵ,γ) for ϵ in E]
+
+    plot(E,Energy)
+    
 end
 function hello()
     println("Hello")
