@@ -1,3 +1,4 @@
+export  P_windows
 function P_windows(ψ,H_0::SymTridiagonal,E::Real,γ::Real)
     """Compute the probability P(E,n,γ) at E"""
     H1 = H_0 + I*(-E +√(im) *γ )
@@ -19,18 +20,12 @@ function wigner(ψ, x::StepRangeLen,i::Integer,p::Real)
 
 end
 
-using Plots
-
+export plot_wigner
 function plot_wigner(ψ,x::StepRangeLen;Δx::Float64=0.)
-    @show iszero(Δx)
-    @show length(ψ)
-    @show length(x)
+    "should be use like surface(plot_wigner()...)"
     xs = iszero(Δx) ? x : range(x[1],x[end];step=Δx)
     ps = xs
     steps = iszero(Δx) ? 1 : Int(fld(Δx,step(x)))
-    @show steps
-    @show cld(Δx,step(x))
     wigners = [wigner(ψ,x,i,p) for i in 1:steps:length(x), p in ps]
-    @show size(wigners)
-    surface(xs,ps,abs2.(wigners))
+    return (xs,ps,abs2.(wigners))
 end
