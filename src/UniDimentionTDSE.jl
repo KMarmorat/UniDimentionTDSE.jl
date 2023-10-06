@@ -111,7 +111,7 @@ function simulate(ψ,param::SimulationParameter,V,F::Function,multF::Vector,extr
 end
 
 function getEigen(V,param::SimulationParameter;irange::UnitRange=1:1)
-    x = range(-param.a,param.a;step= param.Δx)
+    x = buildx(param)
     getEigen(V,x;irange)
 end
 function getEigen(V,x::StepRangeLen;irange=1:1)
