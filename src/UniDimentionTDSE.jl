@@ -6,7 +6,8 @@ include("analyse.jl")
 
 struct SimulationParameter
     Δx::Float64
-    a::Float64
+    Lmin::Float64
+    Lmax::Float64
     Δt::Float64
     time::Float64
     Nt::Int64
@@ -126,13 +127,14 @@ function getEigen(V,x::StepRangeLen;irange=1:1)
     (E,ψs)
 end
 function buildx(param::SimulationParameter)
-    range(-param.a,param.a;step=param.Δx)
+    range(-param.Lmin,param.Lmax;step=param.Δx)
 end
 
 
 function test()
     param = SimulationParameter(
     0.01,
+    -10,
     10,
     0.01,
     31.400,
@@ -148,7 +150,7 @@ function test()
     end
 
     V = x -> 1/2*x.^2
-    x = range(param)
+    x = buildx(param)
 
     
     _ ,eig = getEigen(V,param ;irange = 1:3)
@@ -165,6 +167,7 @@ end
 function test_wigner()
     param = SimulationParameter(
     0.01,
+    -5,
     5,
     0.1,
     31.400,
@@ -183,6 +186,7 @@ end
 function test_P_windows()
     param = SimulationParameter(
     0.01,
+    -5,
     5,
     0.1,
     31.400,
@@ -209,6 +213,7 @@ function test_streaking()
     Delta_t = 0.01
     param = SimulationParameter(
     0.0001,
+    -50,
     50,
     Delta_t,
     2N/omega*π,
