@@ -58,6 +58,11 @@ function Hamiltonian!(H::SymTridiagonal,Hdiag_0,x::AbstractRange,F,t)
     @. H.dv = Hdiag_0 + x*F(t)
 end
 
+function Hamiltonian(V,param::SimulationParameter)
+    x = buildx(param)
+    Hamiltonian(V,x)
+end
+
 function Hamiltonian(V,x::AbstractRange)
     "Create the time independant Hamiltonian"
     Δx = step(x)
@@ -103,12 +108,16 @@ end
 
 function getEigen(V,param::SimulationParameter;irange::UnitRange=1:1)
     x = range(-param.a,param.a;step= param.Δx)
+    getEigen(V,x;irange)
+end
+function getEigen(V,x::StepRangeLen;irange=1:1)
+
     H = Hamiltonian(V,x)
     E, ψs =  eigen(H,irange)
 
     for ψ in eachcol(ψs)
         normalize!(ψ)
-        ψ ./= param.Δx
+        ψ ./= sqrt(step(x))
     end
 
     (E,ψs)
@@ -178,17 +187,43 @@ function test_P_windows()
     20,
     "Test"
     )
-    γ = 0.0001
+    γ = 0.00006
     V = x -> 1/2*x.^2
     x = buildx(param)
 
-    _,ψ = getEigen(V,param)
+    _,ψ = getEigen(V,param;irange=1:3)
+    ψ = sum(ψ,dims=2)
     H = Hamiltonian(V,x)
-    E = range(0.4,0.6;step=0.0001)
+    E = range(0.4,3;step=0.0001)
     Energy = [P_windows(ψ,H,ϵ,γ) for ϵ in E]
 
-    plot(E,Energy)
+    (E,Energy)
     
+end
+function test_streaking()
+    omega = 1.5
+    N = 20
+    Delta_t = 0.01
+    param = SimulationParameter(
+    0.0001,
+    50,
+    Delta_t,
+    2N/omega*π,
+    Int(floor(2N/omega*π / Delta_t)),
+    20,
+    "Test"
+    )
+    @show param
+    a = 0.707
+    V(x) = -1/sqrt(x^2 + a^2)
+
+    x = buildx(param)
+    E,ψ = getEigen(V,param)
+
+    ψ = convert(Array{Complex},ψ)
+    F(t) = 0.01*sin(omega/(2N)*t)^2*sin(omega*t)
+    simulate(ψ,param,V,F)
+    (V,param)
 end
 function hello()
     println("Hello")
