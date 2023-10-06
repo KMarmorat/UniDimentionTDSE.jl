@@ -53,9 +53,9 @@ function buildCrankNicolson(H,Δt)
     (Htop,Hbottom)
 end
 
-function Hamiltonian!(H::SymTridiagonal,Hdiag_0,x::AbstractRange,F,t)
+function Hamiltonian!(H::SymTridiagonal,Hdiag_0,x::AbstractRange,F,multF,t)
     "Update the Hamiltonian"
-    @. H.dv = Hdiag_0 + x*F(t)
+    @. H.dv = Hdiag_0 + F(t)*multF
 end
 
 function Hamiltonian(V,param::SimulationParameter)
@@ -74,8 +74,11 @@ end
 function simulate(ψ,param::SimulationParameter,V)
     simulate(ψ,param,V,(t)->0)
 end
+function simulate(ψ,param::SimulationParameter,V,F::Function,extrafunctions...)
+    simulate(ψ,param,V,F,buildx(param))
+end
 
-function simulate(ψ,param::SimulationParameter,V,F,extrafunctions...)
+function simulate(ψ,param::SimulationParameter,V,F::Function,multF::Vector,extrafunctions...)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
     x = buildx(param)
 
@@ -91,7 +94,7 @@ function simulate(ψ,param::SimulationParameter,V,F,extrafunctions...)
         for i = 1:param.Nt
             t = i*param.Δt
 
-            Hamiltonian!(H,H_0.dv,x,F,t)
+            Hamiltonian!(H,H_0.dv,x,F,multF,t)
             buildCrankNicolson!(H,Htop,Hbottom,param.Δt)
             propagate!(ψ,Htop,Hbottom)
 
