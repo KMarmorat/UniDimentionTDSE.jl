@@ -54,36 +54,36 @@ function buildCrankNicolson(H,Δt)
     (Htop,Hbottom)
 end
 
-function Hamiltonian!(H::SymTridiagonal,Hdiag_0,x::AbstractRange,F,multF,t)
+function Hamiltonian!(H::SymTridiagonal,Hdiag_0,x::AbstractRange,F,multF,t;μ::Real=1)
     "Update the Hamiltonian"
     @. H.dv = Hdiag_0 + F(t)*multF
 end
 
-function Hamiltonian(V,param::SimulationParameter)
+function Hamiltonian(V,param::SimulationParameter;μ::Real=1)
     x = buildx(param)
-    Hamiltonian(V,x)
+    Hamiltonian(V,x;μ)
 end
 
-function Hamiltonian(V,x::AbstractRange)
+function Hamiltonian(V,x::AbstractRange;μ::Real=1)
     "Create the time independant Hamiltonian"
     Δx = step(x)
-    midline = V.(x)   .+ 1/(Δx)^2
-    topline = zero(x) .- 1/(2*(Δx)^2)
+    midline = V.(x)   .+ 1/(μ*(Δx)^2)
+    topline = zero(x) .- 1/(μ*2*(Δx)^2)
     SymTridiagonal((midline),(topline))
 end
 
-function simulate(ψ,param::SimulationParameter,V)
-    simulate(ψ,param,V,(t)->0)
+function simulate(ψ,param::SimulationParameter,V;μ::Real = 1)
+    simulate(ψ,param,V,(t)->0;μ)
 end
-function simulate(ψ,param::SimulationParameter,V,F::Function,extrafunctions...)
-    simulate(ψ,param,V,F,buildx(param))
+function simulate(ψ,param::SimulationParameter,V,F::Function,extrafunctions...;μ::Real = 1)
+    simulate(ψ,param,V,F,buildx(param);μ)
 end
 
-function simulate(ψ,param::SimulationParameter,V,F::Function,multF::Vector,extrafunctions...)
+function simulate(ψ,param::SimulationParameter,V,F::Function,multF::Vector,extrafunctions...;μ::Real=1)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
     x = buildx(param)
 
-    H = Hamiltonian(V,x)
+    H = Hamiltonian(V,x;μ)
     H_0 = copy(H)
 
     _,eigVecs = getEigen(V,param;irange= 1:param.Neig)
@@ -95,7 +95,7 @@ function simulate(ψ,param::SimulationParameter,V,F::Function,multF::Vector,extr
         for i = 1:param.Nt
             t = i*param.Δt
 
-            Hamiltonian!(H,H_0.dv,x,F,multF,t)
+            Hamiltonian!(H,H_0.dv,x,F,multF,t;μ)
             buildCrankNicolson!(H,Htop,Hbottom,param.Δt)
             propagate!(ψ,Htop,Hbottom)
 
