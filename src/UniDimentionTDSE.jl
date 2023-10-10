@@ -127,7 +127,7 @@ function getEigen(V,x::StepRangeLen;irange=1:1)
     (E,ψs)
 end
 function buildx(param::SimulationParameter)
-    range(-param.Lmin,param.Lmax;step=param.Δx)
+    range(param.Lmin,param.Lmax;step=param.Δx)
 end
 
 
