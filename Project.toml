@@ -4,6 +4,7 @@ authors = ["KMarmorat <kenzo.marmorat@ens.psl.eu> and contributors"]
 version = "1.0.0-DEV"
 
 [deps]
+BandedMatrices = "aae01518-5342-5314-be14-df237901396f"
 DelimitedFiles = "8bb1440f-4735-579b-a4ab-409b98df4dab"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 

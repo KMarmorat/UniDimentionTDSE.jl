@@ -1,6 +1,6 @@
 module UniDimentionTDSE
-using LinearAlgebra,DelimitedFiles
-export Hamiltonian,simulate,test,getEigen,test_wigner
+using LinearAlgebra,DelimitedFiles,BandedMatrices
+export Hamiltonian,simulate,test,getEigen,test_wigner,simulate_coupled
 include("absorbtion.jl")
 include("analyse.jl")
 
@@ -15,13 +15,21 @@ struct SimulationParameter
     Filename::String
 end
 
-function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io,extrafunctions...)
+function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io::IOStream,extrafunctions...)
 
     pop = reshape([dot(ψ,normalize!(ϕ)*param.Δx) for ϕ in eachcol(eigVecs)],1,param.Neig)
-    extra = reshape([f(ψ,t) for f in extrafunctions],1,length(extrafunctions))
-    ψ_norm = norm(ψ)*param.Δx
+        extra = transpose(collect(Iterators.flatten([f(ψ,t) for f in extrafunctions])))
+        ψ_norm = norm(ψ)*sqrt(param.Δx)
 
     writedlm(io,[t  pop F(t) ψ_norm extra],';')
+
+end
+function writeToFile(ψ,param::SimulationParameter,F,t,io::IOStream,extrafunctions...)
+
+    extra = transpose(collect(Iterators.flatten([f(ψ[1:end÷2],t) for f in extrafunctions])))
+        ψ_norm = norm(ψ[1:end÷2])*sqrt(param.Δx)
+
+    writedlm(io,[t  F(t) ψ_norm extra],';')
 
 end
 
@@ -43,8 +51,15 @@ end
 
 function buildCrankNicolson!(H,Htop,Hbottom,Δt)
     "Update the upper and lower part of Crank Nicolson"
-    Htop.dv .= 1 .- im * H.dv * Δt/2
-    Hbottom.dv .= 1 .+ im * H.dv * Δt/2
+    n,_ = size(H)
+    n ÷= 2
+
+    @. Htop[band(n)] =  - im * H[band(n)] * Δt/2
+    @. Hbottom[band(n)] = + im * H[band(n)] * Δt/2
+
+    n = -n
+    @. Htop[band(n)] =  - im * H[band(n)] * Δt/2
+    @. Hbottom[band(n)] = + im * H[band(n)] * Δt/2
 end
 
 function buildCrankNicolson(H,Δt)
@@ -54,6 +69,9 @@ function buildCrankNicolson(H,Δt)
     (Htop,Hbottom)
 end
 
+function greet()
+    println("coucou")
+end
 function Hamiltonian!(H::SymTridiagonal,Hdiag_0,x::AbstractRange,F,multF,t;μ::Real=1)
     "Update the Hamiltonian"
     @. H.dv = Hdiag_0 + F(t)*multF
@@ -73,17 +91,20 @@ function Hamiltonian(V,x::AbstractRange;μ::Real=1)
 end
 
 function simulate(ψ,param::SimulationParameter,V;μ::Real = 1)
+    println("coucou1")
     simulate(ψ,param,V,(t)->0;μ)
 end
-function simulate(ψ,param::SimulationParameter,V,F::Function,extrafunctions...;μ::Real = 1)
+function simulate(ψ,param::SimulationParameter,V,F::Function;μ::Real = 1)
+    println("coucou2")
     simulate(ψ,param,V,F,buildx(param);μ)
 end
 
-function simulate(ψ,param::SimulationParameter,V,F::Function,multF::Vector,extrafunctions...;μ::Real=1)
+function simulate(ψ,param::SimulationParameter,V,F::Function,multF::AbstractVecOrMat,extrafunctions...;μ::Real=1)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
+
     x = buildx(param)
 
-    H = Hamiltonian(V,x;μ)
+    H = SymTridiagonal(Matrix{ComplexF64}(Hamiltonian(V,x;μ)))
     H_0 = copy(H)
 
     _,eigVecs = getEigen(V,param;irange= 1:param.Neig)
@@ -110,10 +131,56 @@ function simulate(ψ,param::SimulationParameter,V,F::Function,multF::Vector,extr
     end
 end
 
+function Hamiltonian_coupled(x::AbstractRange,V1,V2;μ::Real=1)
+    "Create the time independant Hamiltonian"
+    n = length(x)
+    Δx = step(x)
+    midline = vcat(V1.(x),V2.(x))   .+ 1/(μ*(Δx)^2)
+    topline = zeros(2n-1) .- 1/(μ*2*(Δx)^2)
+    topline[n] = 0
+    BandedMatrix(0=>midline,1=>topline,-1=>topline,(n)=>ones(n),(-n)=>ones(n))
+end
+
+function Hamiltonian_coupled!(H,x::AbstractRange,F,t;μ::Real=1)
+    "Update the Hamiltonian"
+    n = length(x)
+    @. H[band(n)] = F(t)
+    @. H[band(-n)] = F(t)
+end
+
+function simulate_coupled(ψ,ϕ,param::SimulationParameter,V1,V2,F::Function,extrafunctions...;μ::Real=1)
+    @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
+    Ψ = vcat(ψ,ϕ)
+
+
+    x = buildx(param)
+
+    H = Hamiltonian_coupled(x,V1,V2;μ)
+    (Htop,Hbottom) = buildCrankNicolson(H,param.Δt)
+
+    open(param.Filename,"w") do io
+        for i = 1:param.Nt
+            t = i*param.Δt
+
+            Hamiltonian_coupled!(H,x,F,t;μ)
+
+            buildCrankNicolson!(H,Htop,Hbottom,param.Δt)
+            propagate!(Ψ,Htop,Hbottom)
+            iszero(real(param.Δt)) && begin  normalize!(Ψ); Ψ/=param.Δx end
+            writeToFile(Ψ,param,F,t,io,extrafunctions...)
+        end
+    end
+
+    open(param.Filename * ".wavefunctions","w") do io
+        writedlm(io,Ψ,';')
+    end
+end
+
 function getEigen(V,param::SimulationParameter;irange::UnitRange=1:1)
     x = buildx(param)
     getEigen(V,x;irange)
 end
+
 function getEigen(V,x::StepRangeLen;irange=1:1)
 
     H = Hamiltonian(V,x)
