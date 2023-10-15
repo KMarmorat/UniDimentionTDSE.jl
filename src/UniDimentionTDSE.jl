@@ -15,6 +15,7 @@ struct SimulationParameter
     Filename::String
 end
 
+
 function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io::IOStream,extrafunctions...;
     lineNorm::Integer=1,numberLine::Integer=1)
 
