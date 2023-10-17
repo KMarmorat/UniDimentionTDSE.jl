@@ -23,10 +23,13 @@ function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io::IOStream,extr
 
 
     pop = reshape([dot(ξ,ϕ)*param.Δx for ϕ in eachcol(eigVecs)],1,param.Neig)
-    extra = transpose(collect(Iterators.flatten([f(ξ,t) for f in extrafunctions])))
-
     ψ_norm = norm(ξ)*sqrt(param.Δx)
+    if extrafunctions == ()
+        writedlm(io,[t  pop F(t) ψ_norm],';')
+        return
+    end
 
+    extra = transpose(collect(Iterators.flatten([f(ξ,t) for f in extrafunctions])))
     writedlm(io,[t  pop F(t) ψ_norm extra],';')
 
 end
@@ -151,7 +154,6 @@ function simulation_loop(ψ,param::SimulationParameter,H,F,bCNicolson,bCNicolson
 
             iszero(real(param.Δt)) && begin  normalize!(ψ); ψ/=param.Δx end
 
-    @show endTime
             writeToFile(ψ,param,eigVecs,F,t,io,extrafunctions...;lineNorm,numberLine)
         end
     end
