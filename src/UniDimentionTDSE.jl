@@ -98,17 +98,21 @@ function Hamiltonian(x::AbstractRange,V;μ::Real=1,Type=Float64)
     SymTridiagonal((midline),(topline))
 end
 
-function simulate(ψ,param::SimulationParameter,V;μ::Real = 1)
-    println("coucou1")
+function simulate(ψ,param::SimulationParameter,V
+    ;μ::Real = 1)
     simulate(ψ,param,V,(t)->0;μ)
 end
-function simulate(ψ,param::SimulationParameter,V,F::Function;μ::Real = 1)
-    println("coucou2")
+function simulate(ψ,param::SimulationParameter,V,F::Function
+    ;μ::Real = 1)
     simulate(ψ,param,V,F,buildx(param);μ)
 end
 
-function simulate(ψ,param::SimulationParameter,V,F::Function,multF::AbstractVecOrMat,extrafunctions...
-    ;μ::Real=1,)
+function simulate(ψ,param::SimulationParameter,V,F::Function,extrafunctions...
+    ;μ::Real=1
+    ,endTime::Real=0
+    ,startTime::Real=1
+    ,read_access="w"
+    ,output="wavefunctions")
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
 
     x = buildx(param)
@@ -116,11 +120,19 @@ function simulate(ψ,param::SimulationParameter,V,F::Function,multF::AbstractVec
     H = SymTridiagonal(Matrix{ComplexF64}(Hamiltonian(x,V;μ)))
 
     _,eigVecs = getEigen(V,param;irange= 1:param.Neig)
-    simulation_loop(ψ,param,H,F,buildCrankNicolson,buildCrankNicolson!,Hamiltonian!,eigVecs,extrafunctions...;μ)
+    simulation_loop(ψ,param,H,F,buildCrankNicolson,buildCrankNicolson!,Hamiltonian!,eigVecs,extrafunctions...
+    ;μ,output,endTime,startTime,read_access)
 end
 
 
-function simulation_loop(ψ,param::SimulationParameter,H,F,bCNicolson,bCNicolson!,bHamilton!,eigVecs,extrafunctions...;μ::Real=1,lineNorm::Integer=1,numberLine::Integer=1,endTime::Real=0,startTime::Real=1,read_access="w",output="wavefunctions")
+function simulation_loop(ψ,param::SimulationParameter,H,F,bCNicolson,bCNicolson!,bHamilton!,eigVecs,extrafunctions...
+    ;μ::Real=1
+    ,lineNorm::Integer=1
+    ,numberLine::Integer=1
+    ,endTime::Real=0
+    ,startTime::Real=1
+    ,read_access="w"
+    ,output="wavefunctions")
 
     endTime = iszero(endTime) ? param.Nt : endTime/param.Δt
     startTime = isone(startTime) ? 1 : startTime/param.Δt
@@ -185,9 +197,7 @@ function simulate_coupled(ψ,ϕ,param::SimulationParameter,V1,V2,F::Function,ext
     if double_simulation
         @show "second Simulation"
         ξ = Ψ[(lineNorm-1)*(end÷numberLine)+1:(lineNorm)*(end÷numberLine)]
-        H = Hamiltonian(x,V1;μ,Type=ComplexF64)
-
-        simulation_loop(ξ,param,H,t->0,buildCrankNicolson,buildCrankNicolson!,Hamiltonian!,eigVecs,extrafunctions...;μ,startTime=endTime,read_access="a",output="wavefunctions_second")
+        simulate(ξ,param,H,t->0,extrafunctions...;μ,startTime=endTime,read_access="a",output="wavefunctions_second")
     end
 end
 
