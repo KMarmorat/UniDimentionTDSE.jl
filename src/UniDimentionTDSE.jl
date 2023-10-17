@@ -117,7 +117,7 @@ function simulate(ψ,param::SimulationParameter,V,F::Function,extrafunctions...
 
     x = buildx(param)
 
-    H = SymTridiagonal(Matrix{ComplexF64}(Hamiltonian(x,V;μ)))
+    H = (Hamiltonian(x,V;μ,Type=ComplexF64))
 
     _,eigVecs = getEigen(V,param;irange= 1:param.Neig)
     simulation_loop(ψ,param,H,F,buildCrankNicolson,buildCrankNicolson!,Hamiltonian!,eigVecs,extrafunctions...
