@@ -56,8 +56,8 @@ function propagate!(ψ,Htop,Hbottom)
 end
 function buildCrankNicolson!(H,Htop,Hbottom,Δt)
     "Update the upper and lower part of Crank Nicolson"
-    Htop.dv = 1 - im*H.dv * Δt/2
-    Hbottom.dv = 1 - im*H.bottom * Δt/2
+    @. Htop.dv = 1 - im*H.dv * Δt/2
+    @. Hbottom.dv = 1 - im*H.dv * Δt/2
 end
 
 function buildCrankNicolson_coupled!(H,Htop,Hbottom,Δt)
@@ -80,21 +80,21 @@ function buildCrankNicolson(H,Δt)
     (Htop,Hbottom)
 end
 
-function Hamiltonian!(H::SymTridiagonal,Hdiag_0,x::AbstractRange,F,multF,t;μ::Real=1)
+function Hamiltonian!(H::SymTridiagonal,Hdiag_0,x::AbstractRange,F,t;μ::Real=1)
     "Update the Hamiltonian"
-    @. H.dv = Hdiag_0.dv + F(t)*multF
+    @. H.dv = Hdiag_0.dv + F(t)*x
 end
 
-function Hamiltonian(V,param::SimulationParameter;μ::Real=1)
+function Hamiltonian(param::SimulationParameter,V;μ::Real=1,Type=Float64)
     x = buildx(param)
-    Hamiltonian(V,x;μ)
+    Hamiltonian(V,x;μ,Type)
 end
 
-function Hamiltonian(V,x::AbstractRange;μ::Real=1)
+function Hamiltonian(x::AbstractRange,V;μ::Real=1,Type=Float64)
     "Create the time independant Hamiltonian"
     Δx = step(x)
-    midline = V.(x)   .+ 1/(μ*(Δx)^2)
-    topline = zero(x) .- 1/(μ*2*(Δx)^2)
+    midline::Vector{Type} = V.(x)   .+ 1/(μ*(Δx)^2)
+    topline::Vector{Type} = zero(x) .- 1/(μ*2*(Δx)^2)
     SymTridiagonal((midline),(topline))
 end
 
@@ -113,21 +113,26 @@ function simulate(ψ,param::SimulationParameter,V,F::Function,multF::AbstractVec
 
     x = buildx(param)
 
-    H = SymTridiagonal(Matrix{ComplexF64}(Hamiltonian(V,x;μ)))
+    H = SymTridiagonal(Matrix{ComplexF64}(Hamiltonian(x,V;μ)))
 
     _,eigVecs = getEigen(V,param;irange= 1:param.Neig)
     simulation_loop(ψ,param,H,F,buildCrankNicolson,buildCrankNicolson!,Hamiltonian!,eigVecs,extrafunctions...;μ)
 end
 
 
-function simulation_loop(ψ,param::SimulationParameter,H,F,bCNicolson,bCNicolson!,bHamilton!,eigVecs,extrafunctions...;μ::Real=1,lineNorm::Integer=1,numberLine::Integer=1)
-    
+function simulation_loop(ψ,param::SimulationParameter,H,F,bCNicolson,bCNicolson!,bHamilton!,eigVecs,extrafunctions...;μ::Real=1,lineNorm::Integer=1,numberLine::Integer=1,endTime::Real=0,startTime::Real=1,read_access="w",output="wavefunctions")
+
+    endTime = iszero(endTime) ? param.Nt : endTime/param.Δt
+    startTime = isone(startTime) ? 1 : startTime/param.Δt
+
     x = buildx(param)
     H_0 = copy(H)
     (Htop,Hbottom) = bCNicolson(H,param.Δt)
 
-    open(param.Filename,"w") do io
-        for i = 1:param.Nt
+    @show startTime
+    @show endTime
+    open(param.Filename,read_access) do io
+        for i = startTime:endTime
             t = i*param.Δt
 
             bHamilton!(H,H_0,x,F,t;μ)
@@ -140,7 +145,7 @@ function simulation_loop(ψ,param::SimulationParameter,H,F,bCNicolson,bCNicolson
         end
     end
 
-    open(param.Filename * ".wavefunctions","w") do io
+    open(param.Filename * "." * output,"w") do io
         writedlm(io,ψ,';')
     end
 end
@@ -163,7 +168,8 @@ function Hamiltonian_coupled!(H,H_0,x::AbstractRange,F,t;μ::Real=1)
 end
 
 function simulate_coupled(ψ,ϕ,param::SimulationParameter,V1,V2,F::Function,extrafunctions...
-    ;μ::Real=1,lineNorm::Integer=1,numberLine::Integer=1)
+    ;μ::Real=1,lineNorm::Integer=1,numberLine::Integer=1,
+    double_simulation::Bool=false,endTime::Real=0)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
     Ψ = vcat(ψ,ϕ)
 
@@ -173,7 +179,16 @@ function simulate_coupled(ψ,ϕ,param::SimulationParameter,V1,V2,F::Function,ext
     H = Hamiltonian_coupled(x,V1,V2;μ)
     _,eigVecs = getEigen(V2,param;irange= 1:param.Neig)
 
-    simulation_loop(Ψ,param,H,F,buildCrankNicolson,buildCrankNicolson_coupled!,Hamiltonian_coupled!,eigVecs,extrafunctions...;μ,lineNorm,numberLine)
+
+    simulation_loop(Ψ,param,H,F,buildCrankNicolson,buildCrankNicolson_coupled!,Hamiltonian_coupled!,eigVecs,extrafunctions...;μ,lineNorm,numberLine,endTime)
+
+    if double_simulation
+        @show "second Simulation"
+        ξ = Ψ[(lineNorm-1)*(end÷numberLine)+1:(lineNorm)*(end÷numberLine)]
+        H = Hamiltonian(x,V1;μ,Type=ComplexF64)
+
+        simulation_loop(ξ,param,H,t->0,buildCrankNicolson,buildCrankNicolson!,Hamiltonian!,eigVecs,extrafunctions...;μ,startTime=endTime,read_access="a",output="wavefunctions_second")
+    end
 end
 
 function getEigen(V,param::SimulationParameter;irange::UnitRange=1:1,μ::Real=1)
@@ -183,7 +198,7 @@ end
 
 function getEigen(V,x::StepRangeLen;irange=1:1,μ::Real=1)
 
-    H = Hamiltonian(V,x;μ)
+    H = Hamiltonian(x,V;μ)
     E, ψs =  eigen(H,irange)
 
     for ψ in eachcol(ψs)
@@ -267,7 +282,7 @@ function test_P_windows()
 
     _,ψ = getEigen(V,param;irange=1:3)
     ψ = sum(ψ,dims=2)
-    H = Hamiltonian(V,x)
+    H = Hamiltonian(x,V)
     E = range(0.4,3;step=0.0001)
     Energy = [P_windows(ψ,H,ϵ,γ) for ϵ in E]
 
