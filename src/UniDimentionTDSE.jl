@@ -23,7 +23,7 @@ function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io::IOStream,extr
 
 
     pop = reshape([dot(ξ,ϕ)*param.Δx for ϕ in eachcol(eigVecs)],1,param.Neig)
-    extra = transpose(collect([f(ξ,t) for f in extrafunctions]))
+    extra = transpose(collect(Iterators.flatten([f(ξ,t) for f in extrafunctions])))
 
     ψ_norm = norm(ξ)*sqrt(param.Δx)
 
@@ -81,9 +81,9 @@ function buildCrankNicolson(H,Δt)
     (Htop,Hbottom)
 end
 
-function Hamiltonian!(H::SymTridiagonal,H_0,x::AbstractRange,F,t;μ::Real=1)
+function Hamiltonian!(H::SymTridiagonal,Hdiag_0,x::AbstractRange,F,t;μ::Real=1)
     "Update the Hamiltonian"
-    @. H.dv = H_0.dv + F(t)*x
+    @. H.dv = Hdiag_0.dv + F(t)*x
 end
 
 function Hamiltonian(param::SimulationParameter,V;μ::Real=1,Type=Float64)
@@ -117,8 +117,7 @@ function simulate(ψ,param::SimulationParameter,V,F::Function,extrafunctions...
 
     H = (Hamiltonian(x,V;μ,Type=ComplexF64))
 
-    eigEn,eigVecs = getEigen(isnothing(Veigen) ? V : Veigen,param;irange= 1:param.Neig)
-
+    _,eigVecs = getEigen(isnothing(Veigen) ? V : Veigen,param;irange= 1:param.Neig)
     simulation_loop(ψ,param,H,F,buildCrankNicolson,buildCrankNicolson!,Hamiltonian!,eigVecs,extrafunctions...
     ;μ,output,endTime,startTime,read_access)
 end
@@ -137,9 +136,7 @@ function simulation_loop(ψ,param::SimulationParameter,H,F,bCNicolson,bCNicolson
     startTime = isone(startTime) ? 1 : startTime/param.Δt
 
     x = buildx(param)
-
     H_0 = copy(H)
-
     (Htop,Hbottom) = bCNicolson(H,param.Δt)
 
     @show startTime
@@ -150,11 +147,11 @@ function simulation_loop(ψ,param::SimulationParameter,H,F,bCNicolson,bCNicolson
 
             bHamilton!(H,H_0,x,F,t;μ)
             bCNicolson!(H,Htop,Hbottom,param.Δt)
-
             propagate!(ψ,Htop,Hbottom)
 
             iszero(real(param.Δt)) && begin  normalize!(ψ); ψ/=param.Δx end
 
+    @show endTime
             writeToFile(ψ,param,eigVecs,F,t,io,extrafunctions...;lineNorm,numberLine)
         end
     end
@@ -256,7 +253,7 @@ function test()
 
     F(t) = 0.5*sin(t*0.8)*(t<=6π)
 
-    simulate(ψ_0,param,V)
+    simulate(ψ_0,param,V,F)
 end
 function test_wigner()
     param = SimulationParameter(
