@@ -197,7 +197,7 @@ function simulate_coupled(ψ,ϕ,param::SimulationParameter,V1,V2,F::Function,ext
     if double_simulation
         @show "second Simulation"
         ξ = Ψ[(lineNorm-1)*(end÷numberLine)+1:(lineNorm)*(end÷numberLine)]
-        simulate(ξ,param,H,t->0,extrafunctions...;μ,startTime=endTime,read_access="a",output="wavefunctions_second")
+        simulate(ξ,param,V1,t->0,extrafunctions...;μ,startTime=endTime,read_access="a",output="wavefunctions_second")
     end
 end
 
