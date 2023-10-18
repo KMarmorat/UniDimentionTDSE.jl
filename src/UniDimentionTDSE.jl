@@ -1,6 +1,6 @@
 module UniDimentionTDSE
 using LinearAlgebra,DelimitedFiles,BandedMatrices
-export Hamiltonian,simulate,test,getEigen,test_wigner,simulate_coupled
+export Hamiltonian,simulate,test,getEigen,test_wigner,simulate_coupled,simulate_coupled_new
 include("absorbtion.jl")
 include("analyse.jl")
 
@@ -148,7 +148,7 @@ function simulation_loop(ψ,param::SimulationParameter,H,F,bCNicolson,bCNicolson
         for i = startTime:endTime
             t = i*param.Δt
 
-            bHamilton!(H,H_0,x,F,t;μ)
+            bHamilton!(H,H_0,x,F,t+param.Δt/2;μ)
             bCNicolson!(H,Htop,Hbottom,param.Δt)
             propagate!(ψ,Htop,Hbottom)
 
@@ -161,6 +161,13 @@ function simulation_loop(ψ,param::SimulationParameter,H,F,bCNicolson,bCNicolson
     open(param.Filename * "." * output,"w") do io
         writedlm(io,ψ,';')
     end
+end
+
+function rotate!(ψ1,ψ2,F,t,Δt)
+    time = t + Δt/2 
+    step = Δt/2
+    @. ψ1 = cos(F(time)*step)*ψ1 + im*sin(F(time)*step)*ψ2
+    @. ψ2 = cos(F(time)*step)*ψ2 + im*sin(F(time)*step)*ψ1
 end
 
 function Hamiltonian_coupled(x::AbstractRange,V1,V2;μ::Real=1)
@@ -180,28 +187,38 @@ function Hamiltonian_coupled!(H,H_0,x::AbstractRange,F,t;μ::Real=1)
     @. H[band(-n)] = F(t)
 end
 
-function simulate_coupled(ψ,ϕ,param::SimulationParameter,V1,V2,F::Function,extrafunctions...
+function simulate_coupled(ψ1,ψ2,param::SimulationParameter,V1,V2,F::Function,extrafunctions...
     ;μ::Real=1,lineNorm::Integer=1,numberLine::Integer=1,
     double_simulation::Bool=false,endTime::Real=0)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
-    Ψ = vcat(ψ,ϕ)
-
-
     x = buildx(param)
 
-    H = Hamiltonian_coupled(x,V1,V2;μ)
+    Type = ComplexF64
+    H1 = Hamiltonian(x,V1;μ,Type)
+    H2 = Hamiltonian(x,V2;μ,Type)
     _,eigVecs = getEigen(V2,param;irange= 1:param.Neig)
 
 
-    simulation_loop(Ψ,param,H,F,buildCrankNicolson,buildCrankNicolson_coupled!,Hamiltonian_coupled!,eigVecs,extrafunctions...;μ,lineNorm,numberLine,endTime)
+    open(param.Filename,"w") do io
+        (Htop1,Hbottom1) = buildCrankNicolson(H1,param.Δt)
+        (Htop2,Hbottom2) = buildCrankNicolson(H2,param.Δt)
+        for i = 1:endTime/param.Δt
+            t = i*param.Δt
+            rotate!(ψ1,ψ2,F,t,param.Δt)
+
+            propagate!(ψ1,Htop1,Hbottom1)
+            propagate!(ψ2,Htop2,Hbottom2)
+
+            rotate!(ψ1,ψ2,F,t,param.Δt)
+            writeToFile(ψ1,param,eigVecs,F,t,io,extrafunctions...)
+        end
+    end
 
     if double_simulation
         @show "second Simulation"
-        ξ = Ψ[(lineNorm-1)*(end÷numberLine)+1:(lineNorm)*(end÷numberLine)]
-        simulate(ξ,param,V1,t->0,extrafunctions...;μ,startTime=endTime,read_access="a",output="wavefunctions_second",Veigen=V2)
+        simulate(ψ1,param,V1,t->0,extrafunctions...;μ,startTime=endTime,read_access="a",output="wavefunctions_second",Veigen=V2)
     end
 end
-
 function getEigen(V,param::SimulationParameter;irange::UnitRange=1:1,μ::Real=1)
     x = buildx(param)
     getEigen(V,x;irange)
