@@ -214,6 +214,10 @@ function simulate_coupled(ψ1,ψ2,param::SimulationParameter,V1,V2,F::Function,e
         end
     end
 
+    open(param.Filename * "." * "wavefunctions","w") do io
+        writedlm(io,vcat(ψ1,ψ2),';')
+    end
+
     if double_simulation
         @show "second Simulation"
         simulate(ψ1,param,V1,t->0,extrafunctions...;μ,startTime=endTime,read_access="a",output="wavefunctions_second",Veigen=V2)
