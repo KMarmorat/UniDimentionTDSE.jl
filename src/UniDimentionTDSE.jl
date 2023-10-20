@@ -197,7 +197,8 @@ function simulate_coupled(ψ1,ψ2,param::SimulationParameter,V1,V2,F::Function,e
     Type = ComplexF64
     H1 = Hamiltonian(x,V1;μ,Type)
     H2 = Hamiltonian(x,V2;μ,Type)
-    _,eigVecs = getEigen(V1,param;irange= 1:param.Neig,μ)
+
+    _,eigVecs = getEigen(x -> (real(Veigen(x))),param;irange= 1:param.Neig,μ)
 
 
     open(param.Filename,"w") do io
