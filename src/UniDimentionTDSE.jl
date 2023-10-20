@@ -188,15 +188,16 @@ function Hamiltonian_coupled!(H,H_0,x::AbstractRange,F,t;μ::Real=1)
 end
 
 function simulate_coupled(ψ1,ψ2,param::SimulationParameter,V1,V2,F::Function,extrafunctions...
-    ;μ::Real=1,lineNorm::Integer=1,numberLine::Integer=1,
-    double_simulation::Bool=false,endTime::Real=0)
+    ;μ::Real=1,
+    double_simulation::Bool=false,endTime::Real=0,
+    Veigen=V1)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
     x = buildx(param)
 
     Type = ComplexF64
     H1 = Hamiltonian(x,V1;μ,Type)
     H2 = Hamiltonian(x,V2;μ,Type)
-    _,eigVecs = getEigen(V2,param;irange= 1:param.Neig,μ)
+    _,eigVecs = getEigen(V1,param;irange= 1:param.Neig,μ)
 
 
     open(param.Filename,"w") do io
