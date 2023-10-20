@@ -120,7 +120,7 @@ function simulate(ψ,param::SimulationParameter,V,F::Function,extrafunctions...
 
     H = (Hamiltonian(x,V;μ,Type=ComplexF64))
 
-    _,eigVecs = getEigen(isnothing(Veigen) ? V : Veigen,param;irange= 1:param.Neig,μ)
+    _,eigVecs = getEigen(isnothing(Veigen) ? V : x -> real(Veigen(x)),param;irange= 1:param.Neig,μ)
     simulation_loop(ψ,param,H,F,buildCrankNicolson,buildCrankNicolson!,Hamiltonian!,eigVecs,extrafunctions...
     ;μ,output,endTime,startTime,read_access)
 end
@@ -222,7 +222,7 @@ function simulate_coupled(ψ1,ψ2,param::SimulationParameter,V1,V2,F::Function,e
 
     if double_simulation
         @show "second Simulation"
-        simulate(ψ1,param,V1,t->0,extrafunctions...;μ,startTime=endTime,read_access="a",output="wavefunctions_second",Veigen=V2)
+        simulate(ψ1,param,V1,t->0,extrafunctions...;μ,startTime=endTime,read_access="a",output="wavefunctions_second",Veigen=V1)
     end
 end
 function getEigen(V,param::SimulationParameter;irange::UnitRange=1:1,μ::Real=1)
