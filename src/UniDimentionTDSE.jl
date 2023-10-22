@@ -22,8 +22,9 @@ function writeToFile(ψ,param::SimulationParameter,eigVecs,F,t,io::IOStream,extr
     ξ = ψ[(lineNorm-1)*(end÷numberLine)+1:(lineNorm)*(end÷numberLine)]
 
 
-    pop = reshape([dot(ξ,ϕ)*param.Δx for ϕ in eachcol(eigVecs)],1,param.Neig)
+    pop = reshape([dot(ϕ,ξ)*param.Δx for ϕ in eachcol(eigVecs)],1,param.Neig)
     ψ_norm = norm(ξ)*sqrt(param.Δx)
+
     if extrafunctions == ()
         writedlm(io,[t  pop F(t) ψ_norm],';')
         return
@@ -56,7 +57,9 @@ end
 
 function propagate!(ψ,Htop,Hbottom)
     "Update the wave function"
-    ψ .= Hbottom\(Htop*ψ)
+    mid = Htop*ψ
+    ψtemp = Hbottom\(mid)
+    ψ .= ψtemp
 end
 function buildCrankNicolson!(H,Htop,Hbottom,Δt)
     "Update the upper and lower part of Crank Nicolson"
@@ -222,7 +225,7 @@ function simulate_coupled(ψ1,ψ2,param::SimulationParameter,V1,V2,F::Function,e
 
     if double_simulation
         @show "second Simulation"
-        simulate(ψ1,param,V1,t->0,extrafunctions...;μ,startTime=endTime,read_access="a",output="wavefunctions_second",Veigen=V1)
+        simulate(ψ1,param,V1,t->0,extrafunctions...;μ,startTime=endTime,read_access="a",output="wavefunctions_second",Veigen)
     end
 end
 function getEigen(V,param::SimulationParameter;irange::UnitRange=1:1,μ::Real=1)
@@ -268,17 +271,20 @@ function test()
     V = x -> 1/2*x.^2
     x = buildx(param)
 
+    H = Hamiltonian(x,V)
     
-    _ ,eig = getEigen(V,param ;irange = 1:3)
-    ψ_0 = eig[:,1] 
+    E ,eig = getEigen(V,param ;irange = 1:3)
+    ψ_0 = sum(eig[:,1:3],dims=2)
+    @show E
+    @show dot(ψ_0,H*ψ_0)
 
     ψ_0 = convert(Array{Complex},ψ_0)
 
-    @show norm(ψ_0)*param.Δx
+    @show norm(ψ_0)*sqrt(param.Δx)
 
-    F(t) = 0.5*sin(t*0.8)*(t<=6π)
+    #F(t) = 0.5*sin(t*0.8)*(t<=6π)
 
-    simulate(ψ_0,param,V,F)
+    simulate(ψ_0,param,V)
 end
 function test_wigner()
     param = SimulationParameter(
