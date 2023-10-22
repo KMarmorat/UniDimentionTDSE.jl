@@ -116,14 +116,14 @@ function simulate(ψ,param::SimulationParameter,V,F::Function,extrafunctions...
     ,startTime::Real=1
     ,read_access="w"
     ,output="wavefunctions"
-    ,Veigen=nothing)
+    ,Veigen=V)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
 
     x = buildx(param)
 
     H = (Hamiltonian(x,V;μ,Type=ComplexF64))
 
-    _,eigVecs = getEigen(isnothing(Veigen) ? V : x -> real(Veigen(x)),param;irange= 1:param.Neig,μ)
+    _,eigVecs = getEigen(x -> real(Veigen(x)),param;irange= 1:param.Neig,μ)
     simulation_loop(ψ,param,H,F,buildCrankNicolson,buildCrankNicolson!,Hamiltonian!,eigVecs,extrafunctions...
     ;μ,output,endTime,startTime,read_access)
 end
