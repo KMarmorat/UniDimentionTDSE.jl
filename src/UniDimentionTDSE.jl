@@ -196,11 +196,11 @@ end
 
 function simulate_coupled(ψ1,ψ2,param::SimulationParameter,V1,V2,F::Function,extrafunctions...
     ;μ::Real=1
+    ,lineNorm=1
     ,double_simulation::Bool=false
     ,endTime::Real=0
     ,Veigen=V1
-    ,lineNorm=1
-    modulo=100)
+    ,modulo=100)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
     x = buildx(param)
 
