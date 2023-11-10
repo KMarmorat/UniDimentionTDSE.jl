@@ -116,7 +116,8 @@ function simulate(ψ,param::SimulationParameter,V,F::Function,extrafunctions...
     ,startTime::Real=1
     ,read_access="w"
     ,output="wavefunctions"
-    ,Veigen=V)
+    ,Veigen=V
+    ,modulo = 100)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
 
     x = buildx(param)
@@ -125,7 +126,7 @@ function simulate(ψ,param::SimulationParameter,V,F::Function,extrafunctions...
 
     _,eigVecs = getEigen(x -> real(Veigen(x)),param;irange= 1:param.Neig,μ)
     simulation_loop(ψ,param,H,F,buildCrankNicolson,buildCrankNicolson!,Hamiltonian!,eigVecs,extrafunctions...
-    ;μ,output,endTime,startTime,read_access)
+    ;μ,output,endTime,startTime,read_access,modulo)
 end
 
 
@@ -136,7 +137,8 @@ function simulation_loop(ψ,param::SimulationParameter,H,F,bCNicolson,bCNicolson
     ,endTime::Real=0
     ,startTime::Real=1
     ,read_access="w"
-    ,output="wavefunctions")
+    ,output="wavefunctions"
+    ,modulo=100)
 
     endTime = iszero(endTime) ? param.Nt : endTime/param.Δt
     startTime = isone(startTime) ? 1 : startTime/param.Δt
@@ -157,7 +159,9 @@ function simulation_loop(ψ,param::SimulationParameter,H,F,bCNicolson,bCNicolson
 
             iszero(real(param.Δt)) && begin  normalize!(ψ); ψ/=param.Δx end
 
-            writeToFile(ψ,param,eigVecs,F,t,io,extrafunctions...;lineNorm,numberLine)
+            if mod(1,modulo) == 0
+                writeToFile(ψ,param,eigVecs,F,t,io,extrafunctions...;lineNorm,numberLine)
+            end
         end
     end
 
@@ -193,7 +197,8 @@ end
 function simulate_coupled(ψ1,ψ2,param::SimulationParameter,V1,V2,F::Function,extrafunctions...
     ;μ::Real=1,
     double_simulation::Bool=false,endTime::Real=0,
-    Veigen=V1)
+    Veigen=V1,
+    modulo=100)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
     x = buildx(param)
 
@@ -215,7 +220,9 @@ function simulate_coupled(ψ1,ψ2,param::SimulationParameter,V1,V2,F::Function,e
             propagate!(ψ2,Htop2,Hbottom2)
 
             rotate!(ψ1,ψ2,F,t,param.Δt)
-            writeToFile(ψ1,param,eigVecs,F,t,io,extrafunctions...)
+            if mod(1,modulo) == 0
+                writeToFile(ψ,param,eigVecs,F,t,io,extrafunctions...;lineNorm,numberLine)
+            end
         end
     end
 
@@ -225,7 +232,7 @@ function simulate_coupled(ψ1,ψ2,param::SimulationParameter,V1,V2,F::Function,e
 
     if double_simulation
         @show "second Simulation"
-        simulate(ψ1,param,V1,t->0,extrafunctions...;μ,startTime=endTime,read_access="a",output="wavefunctions_second",Veigen)
+        simulate(ψ1,param,V1,t->0,extrafunctions...;μ,startTime=endTime,read_access="a",output="wavefunctions_second",Veigen,modulo)
     end
 end
 function getEigen(V,param::SimulationParameter;irange::UnitRange=1:1,μ::Real=1)
