@@ -116,8 +116,7 @@ function simulate(ψ,param::SimulationParameter,V,F::Function,extrafunctions...
     ,startTime::Real=1
     ,read_access="w"
     ,output="wavefunctions"
-    ,Veigen=V
-    ,modulo = 100)
+    ,Veigen=V)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
 
     x = buildx(param)
@@ -126,7 +125,7 @@ function simulate(ψ,param::SimulationParameter,V,F::Function,extrafunctions...
 
     _,eigVecs = getEigen(x -> real(Veigen(x)),param;irange= 1:param.Neig,μ)
     simulation_loop(ψ,param,H,F,buildCrankNicolson,buildCrankNicolson!,Hamiltonian!,eigVecs,extrafunctions...
-    ;μ,output,endTime,startTime,read_access,modulo)
+    ;μ,output,endTime,startTime,read_access)
 end
 
 
@@ -195,13 +194,10 @@ function Hamiltonian_coupled!(H,H_0,x::AbstractRange,F,t;μ::Real=1)
 end
 
 function simulate_coupled(ψ1,ψ2,param::SimulationParameter,V1,V2,F::Function,extrafunctions...
-    ;μ::Real=1
-    ,lineNorm=1
-    ,numberLine=1
-    ,double_simulation::Bool=false
-    ,endTime::Real=0
-    ,Veigen=V1
-    ,modulo=100)
+    ;μ::Real=1,
+    double_simulation::Bool=false,endTime::Real=0,
+    Veigen=V1,
+    modulo=100)
     @assert (iszero(imag(param.Δt)) || iszero(real(param.Δt)==0))
     x = buildx(param)
 
@@ -224,7 +220,7 @@ function simulate_coupled(ψ1,ψ2,param::SimulationParameter,V1,V2,F::Function,e
 
             rotate!(ψ1,ψ2,F,t,param.Δt)
             if mod(i,modulo) == 0
-                writeToFile(ψ,param,eigVecs,F,t,io,extrafunctions...;lineNorm,numberLine)
+                writeToFile(ψ1,param,eigVecs,F,t,io,extrafunctions...)
             end
         end
     end
@@ -235,7 +231,7 @@ function simulate_coupled(ψ1,ψ2,param::SimulationParameter,V1,V2,F::Function,e
 
     if double_simulation
         @show "second Simulation"
-        simulate(ψ1,param,V1,t->0,extrafunctions...;μ,startTime=endTime,read_access="a",output="wavefunctions_second",Veigen,modulo)
+        simulate(ψ1,param,V1,t->0,extrafunctions...;μ,startTime=endTime,read_access="a",output="wavefunctions_second",Veigen)
     end
 end
 function getEigen(V,param::SimulationParameter;irange::UnitRange=1:1,μ::Real=1)
