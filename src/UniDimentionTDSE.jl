@@ -159,7 +159,7 @@ function simulation_loop(ψ,param::SimulationParameter,H,F,bCNicolson,bCNicolson
 
             iszero(real(param.Δt)) && begin  normalize!(ψ); ψ/=param.Δx end
 
-            if mod(1,modulo) == 0
+            if mod(i,modulo) == 0
                 writeToFile(ψ,param,eigVecs,F,t,io,extrafunctions...;lineNorm,numberLine)
             end
         end
@@ -220,7 +220,7 @@ function simulate_coupled(ψ1,ψ2,param::SimulationParameter,V1,V2,F::Function,e
             propagate!(ψ2,Htop2,Hbottom2)
 
             rotate!(ψ1,ψ2,F,t,param.Δt)
-            if mod(1,modulo) == 0
+            if mod(i,modulo) == 0
                 writeToFile(ψ,param,eigVecs,F,t,io,extrafunctions...;lineNorm,numberLine)
             end
         end
