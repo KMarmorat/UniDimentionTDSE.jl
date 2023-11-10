@@ -19,7 +19,7 @@ function P_windows(ψ,H_0::SymTridiagonal,E::Real,γ::Real)
     norm(ξ)^2
 end
 
-function Sum_P_windows(ψ,V,x,t,RangeE::Real,Elim::Real;γ::Real=0.02,padding::Integer=1)
+function Sum_P_windows(ψ,V,x,t,RangeE,Elim::Real;γ::Real=0.02,padding::Integer=1)
     x_tilde = padding*x[1]:Float64(x.step):padding*x[end]
     ψ_tilde = zeros(eltype(ψ),length(x_tilde))
     N = (length(ψ)-1) ÷ 2
