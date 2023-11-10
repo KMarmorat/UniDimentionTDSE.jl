@@ -197,6 +197,7 @@ end
 function simulate_coupled(ψ1,ψ2,param::SimulationParameter,V1,V2,F::Function,extrafunctions...
     ;μ::Real=1
     ,lineNorm=1
+    ,numberLine=1
     ,double_simulation::Bool=false
     ,endTime::Real=0
     ,Veigen=V1
