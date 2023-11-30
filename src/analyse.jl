@@ -35,8 +35,9 @@ end
 function wigner(ψ, x::StepRangeLen,i::Integer,p::Real)
     @assert(length(ψ) == length(x))
     n = length(x)
+    Δx = step(x)
 
-    integrate  = j -> conj(ψ[i+j])*ψ[i-j]*exp(-2im*p*j*x.step)*x.step
+    integrate  = j -> conj(ψ[i+j])*ψ[i-j]*exp(-2im*p*j*Δx)*Δx
     minimum = max(1-i,i-n)
     maximum = min(i-1,-i+n)
     (maximum == 0 || minimum == n) && return 0
