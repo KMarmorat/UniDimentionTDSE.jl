@@ -47,10 +47,10 @@ function wigner(ψ, x::StepRangeLen,i::Integer,p::Real)
 end
 
 export plot_wigner
-function plot_wigner(ψ,x::StepRangeLen;Δx::Float64=0.)
+function plot_wigner(ψ,x::StepRangeLen,ps;Δx::Float64=0.)
     "should be use like surface(plot_wigner()...)"
     xs = iszero(Δx) ? x : range(x[1],x[end];step=Δx)
-    ps = xs
+
     steps = iszero(Δx) ? 1 : Int(fld(Δx,step(x)))
     wigners = [wigner(ψ,x,i,p) for i in 1:steps:length(x), p in ps]
     return (xs,ps,wigners)
