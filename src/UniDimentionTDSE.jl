@@ -220,6 +220,7 @@ function simulate_coupled(ψ1,ψ2,param::SimulationParameter,V1,V2,F::Function,e
 
             rotate!(ψ1,ψ2,F,t,param.Δt)
             if mod(i,modulo) == 0
+                @show i
                 writeToFile(ψ1,param,eigVecs,F,t,io,extrafunctions...)
             end
         end
