@@ -39,7 +39,7 @@ function wigner(ψ, x::StepRangeLen,i::Integer,p::Real)
     integrate  = j -> conj(ψ[i+j])*ψ[i-j]*exp(-2im*p*j*x.step)*x.step
     minimum = max(1-i,i-n)
     maximum = min(i-1,-i+n)
-    (maximum == 0) && return 0
+    (maximum == 0 || minimum == n) && return 0
 
     convert(ComplexF64,sum((integrate(j) for j in minimum:maximum)))
 
