@@ -172,7 +172,7 @@ end
 function rotate!(ψ1,ψ2,F,t,Δt)
     time = t + Δt/2 
     step = Δt/2
-    @. ψ1 = cos(F(time)*step)*ψ1 + im*sin(F(time)*step)*ψ2
+    @. ψ1 = cos(F(time)*step)*ψ1 - im*sin(F(time)*step)*ψ2
     @. ψ2 = cos(F(time)*step)*ψ2 + im*sin(F(time)*step)*ψ1
 end
 
